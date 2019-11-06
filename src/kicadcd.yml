@@ -1,29 +1,26 @@
 version: 2.1
-description: This is a test with an inline Orb that simplifies the creation of fabrication outputs of KiCad projects
+description: The purpose of this Orb is to automate the creation of fabrication outputs of KiCad projects. By creating all the files from the same source, the risk of packing together different versions of the files is reduced (e.g. making a change to the PCB and update the gerbers, but forgetting updating the BOM)
 
 jobs:
-  initialSetup:
-    # First job to be called, install the python scripts' repo and makes them callable without having to add the
-    # whole path
+  initialSetup: # Minimal Orb setup: checkout the Kicad project and install the python scripts needed
     executor: kicad_on_ubuntu
     steps:
       - checkout # default working directory is "/root/project"
-      - run:
+      - run: # create artifacts folder
           name: Create artifacts folder
           command: mkdir artifacts
-      - clone_script_repo_and_install_scripts
+      - clone_script_repo
       - persist_to_workspace:
           root: ../
           paths:
             - project
             - project/artifacts
 
-  pickAndPlacePositions:
-    # This job generates the pick and place positions of the components of a PCB file in an
-    # Excel file, and stores it in the artifacts folder.
+  pickAndPlacePositions: # This job generates the pick and place positions of the components of a PCB file in an
+                         # Excel file, and stores it in the artifacts folder.
     parameters:
       projectPath:
-        description: "[REQUIRED] Environmental variable containing the project's folder path"
+        description: "[OPTIONAL] Environmental variable containing the project's folder path"
         type: env_var_name
         default: PROJECT_PATH
       PCBFile:
@@ -36,12 +33,12 @@ jobs:
       artifactsPath:
         description: "[OPTIONAL] Path where to store the artifacts"
         type: string
-        default: "artifacts/"
+        default: "/root/project/artifacts/"
     executor: kicad_on_ubuntu
     steps:
       - attach_workspace:
           at: /root/
-      - clone_script_repo_and_install_scripts
+      - clone_script_repo
       - create_pick_and_place_file:
           projectPath: << parameters.projectPath >>
           PCBFile: << parameters.PCBFile >>
@@ -68,12 +65,12 @@ jobs:
       artifactsPath:
         description: "[OPTIONAL] Path where to store the artifacts"
         type: string
-        default: "artifacts/"
+        default: "/root/project/artifacts/"
     executor: kicad_on_ubuntu
     steps:
       - attach_workspace:
           at: /root/
-      - clone_script_repo_and_install_scripts
+      - clone_script_repo
       - create_gerbers:
           projectPath: << parameters.projectPath >>
           PCBFile: << parameters.PCBFile >>
@@ -82,29 +79,13 @@ jobs:
       - store_artifacts_cmd:
           artifactsPath: << parameters.artifactsPath >>
 
-# storeArtifacts:
-#   parameters:
-#     artifactsPath:
-#       description: "[OPTIONAL] Path where to store the artifacts"
-#       type: string
-#       default: "artifacts/"
-#   executor: kicad_on_ubuntu
-#   steps:
-#     - store_artifacts_cmd:
-#         artifactsPath: << parameters.artifactsPath >>
-
 commands:
-  clone_script_repo_and_install_scripts:
+  clone_script_repo:  # Clones the repo with the auxiliary python scripts
     steps:
       - run: # Clone Python script repos
           name: Clone Script Repos
           # Clone repo at /, not workingdir
           command: git clone https://github.com/mundodisco8/KicadPythonScripts.git /KiCad_Python_Scripts
-# - run: # Make scripts callable
-#     name: Make scripts callable
-#     command: |
-#       mv "KiCad_Python_Scripts/ExcelBomGenerator/ExcelBomGenerator.py" /usr/local/bin
-#       chmod +x /usr/local/bin/ExcelBomGenerator.py
 
   create_pick_and_place_file:
     parameters:
@@ -117,9 +98,9 @@ commands:
         default: false
       artifactsPath:
         type: string
-        default: "artifacts/"
+        default: "/root/project/artifacts/"
     steps:
-      - run:
+      - run: # make scripts callable
           name: Make Scripts callable
           command: |
             mv "/KiCad_Python_Scripts/PositionsGenerator/PositionsGenerator.py" /usr/local/bin
@@ -135,7 +116,7 @@ commands:
         #     - run: PositionsGenerator.py "${<< parameters.projectPath >>}/<< parameters.PCBFile >>.kicad_pcb"
       - run:
           name: Move Artifacts
-          command: mkdir -p << parameters.artifactsPath >> && mv *_Positions.xlsx << parameters.artifactsPath >>
+          command: mkdir -p << parameters.artifactsPath >> && mv ${<< parameters.projectPath >>}/*_Positions.xlsx << parameters.artifactsPath >>
 
   create_gerbers:
     parameters:
@@ -148,12 +129,13 @@ commands:
         default: Kiplot_config.yaml
       artifactsPath:
         type: string
-        default: artifacts
+        default: "/root/project/artifacts/"
     steps:
       - run:
           name: Generate Gerbers
           command: |
-            kiplot -b "${<< parameters.projectPath >>}/<< parameters.PCBFile >>" -c << parameters.configFile>>
+            cd ${<< parameters.projectPath >>}
+            kiplot -b "<< parameters.PCBFile >>" -c << parameters.configFile>>
             PROJECTNAME=$(basename <<parameters.PCBFile>> .kicad_pcb) # strip the extension from PCBFile and use it as project name
             mkdir -p << parameters.artifactsPath >> && tar -zcvf << parameters.artifactsPath >>/${PROJECTNAME}_Gerbers.tar.gz gerberdir/
 
@@ -161,7 +143,7 @@ commands:
     parameters:
       artifactsPath:
         type: string
-        default: artifacts
+        default: "/root/project/artifacts/"
     steps:
       - store_artifacts:
           path: << parameters.artifactsPath >>

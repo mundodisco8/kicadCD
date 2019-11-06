@@ -1,30 +1,31 @@
 version: 2.1
 
 orbs:
-  kicadcd: mundodisco8/kicadcd@0.1.0
+  kicadcd: mundodisco8/kicad-manufacturing-files@dev:06_11_19
 
 workflows:
   createFabricationOutputsAndStore:
       jobs:
-        - kicad-manufacturing-files/initialSetup:
+        - kicadcd/initialSetup:
             name: Initial Setup
-        - kicad-manufacturing-files/pickAndPlacePositions:
+        - kicadcd/pickAndPlacePositions:
             name: Get Pick And Place Positions # best practice is to name each orb job
             projectPath: PROJECT_PATH
-            PCBFile: "Calavera.kicad_pcb"
+            PCBFile: "helix.kicad_pcb"
             includeVirtualComponentsFlag: false
-            artifactsPath: "artifacts/"
+            artifactsPath: "/root/project/artifacts/"
             requires:
               - Initial Setup
 
-        - kicad-manufacturing-files/gerberFiles:
+        - kicadcd/gerberFiles:
             name: Generate Gerber files
             projectPath: PROJECT_PATH
-            PCBFile: "Calavera.kicad_pcb"
+            PCBFile: "helix.kicad_pcb"
             configFile: "Kiplot_config.yaml"
-            artifactsPath: "artifacts/"
+            artifactsPath: "/root/project/artifacts/"
             requires:
               - Initial Setup
+
 
 # - kicad-manufacturing-files/storeArtifacts:
 #     artifactsPath: artifacts
