@@ -16,14 +16,16 @@ The orb can clone the repo containing your project with the `initialSetup` job. 
 
 You will also have to add an environmental variable to your project that contains the path to the KiCad project. You can choose any name you want for it, but the default if none is specified is PROJECT_PATH
 
-TODO: Explain how to add env vars via the web interface
+![Env_Var](support/img/Env_Var_1.png)
+
+![Env_Var](support/img/Env_Var_2.png)
 
 ### Generate Positions file:
 
 To create a part positions' file, use the `pickAndPlacePositions` job. The result is an Excel spreadsheet with the positions of all the parts (unless they are "virtual") referenced to the local origin (not the absolute), their rotation, PCB side and two extra columns with the let
 ters and numbers of the part reference, so they can be sorted in natural order (that is, C1, C2, ..., C9, C10, ... instead of the normal C1, C10, C11, C2, C20, C3, ... which drives me nuts).
 
-TODO: add screenshot of the excel
+![Positions](support/img/Positions.png)
 
 > Be aware that the excel file has a note indicating that the origin for the XY coordinates is the bottom right corner of the board, when seen from the top. Yours might be different!!
 
@@ -42,9 +44,9 @@ It creates a tar.gz file with all the files generated. To indicate which layers 
 
 ## Stuff I use to make this thing work, in no particular order
 
-- KiBoM
-- Kiplot
-- openPyXL
+- [KiBoM](https://github.com/SchrodingersGat/KiBoM)
+- [Kiplot](https://github.com/johnbeard/kiplot)
+- [openPyXL](https://openpyxl.readthedocs.io/en/stable)
 
 ## Detailed Description
 
@@ -82,7 +84,7 @@ It uses a forked version of KiPlot to be able to print gerbers for internal laye
 
 - projectPath (environmental variable): it's the name of the environmental variable that contains the path to the project. By default, your repo is cloned to `/root/project/`. If you need to specify a particular path for your hardware files, create an environmental variable, and use it's name as the value for the `projectPath`.
 - PCBFile (string): name of the KiCad PCB file, including the `.pcbnew` extension.
-- configFile: a KiPlot config file indicating which layers to plot and in what format. You can find examples [here](https://github.com/johnbeard/kiplot/blob/master/docs/samples/generic_plot.kiplot.yaml) and [here](TODO: ADD LINK TO CALAVERA).
+- configFile: a KiPlot config file indicating which layers to plot and in what format. You can find examples [here](https://github.com/johnbeard/kiplot/blob/master/docs/samples/generic_plot.kiplot.yaml) and [here](https://github.com/mundodisco8/Calavera/blob/master/hardware/Kiplot_config.yaml).
 - artifactsPath (string): path to the directory that will hold the artifacts. `/root/project/artifacts/` by default.
 
 **Steps**:
@@ -130,7 +132,7 @@ It requires the initialSetup job to be executed first.
 
 - projectPath (environmental variable): it's the name of the environmental variable that contains the path to the project. By default, your repo is cloned to `/root/project/`. If you need to specify a particular path for your hardware files, create an environmental variable, and use it's name as the value for the `projectPath`.
 - PCBFile (string): name of the KiCad PCB file, including the `.pcbnew` extension.
-- configFile: a KiPlot config file indicating which layers to plot and in what format. You can find examples [here](https://github.com/johnbeard/kiplot/blob/master/docs/samples/generic_plot.kiplot.yaml) and [here](TODO: ADD LINK TO CALAVERA).
+- configFile: a KiPlot config file indicating which layers to plot and in what format. You can find examples [here](https://github.com/johnbeard/kiplot/blob/master/docs/samples/generic_plot.kiplot.yaml) and [here](https://github.com/mundodisco8/Calavera/blob/master/hardware/Kiplot_config.yaml).
 - artifactsPath (string): path to the directory that will hold the artifacts. `/root/project/artifacts/` by default.
 
 ### Executors
@@ -142,27 +144,27 @@ All the tasks are run on a custom Ubuntu image. The image is based in Ubuntu 19.
 #### Validate the orb
 
 ``` bash
-$ circleci orb validate kicadcd.yml
+circleci orb validate kicadcd.yml
 ```
 
 #### List your orbs
 
 ``` bash
-$ circleci orb list {namespace}
+circleci orb list {namespace}
 ```
 
 ``` bash
-$ circleci orb list mundodisco8
+circleci orb list mundodisco8
 ```
 
 To get info about a particular orb
 
 ``` bash
-$ circleci orb info {namespace}/{orb}
+circleci orb info {namespace}/{orb}
 ```
 
 ``` bash
-$ circleci orb info mundodisco8/kicad-manufacturing-files@dev:19_10_24
+circleci orb info mundodisco8/kicad-manufacturing-files@dev:19_10_24
 ```
 
 #### Publish the orb
@@ -172,11 +174,11 @@ You can publish an orb either as a production orb or a development one. They are
 To publish a development orb:
 
 ``` bash
-$ circleci orb publish {pathToOrb} {namespace}/{orbName}
+circleci orb publish {pathToOrb} {namespace}/{orbName}
 ```
 
 Use the `increment` command to increment the version number of a published orb, or `promote` to promote a dev Orb to production.
 
-## To do:
+## To Do
 
-- Generate Gerbers doesn't do DRC or update the planes (I think).
+- Add BoM generation to the Orb, the scripts are already in place.
