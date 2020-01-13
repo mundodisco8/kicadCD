@@ -116,7 +116,7 @@ commands:
         #     - run: PositionsGenerator.py "${<< parameters.projectPath >>}/<< parameters.PCBFile >>.kicad_pcb"
       - run:
           name: Move Artifacts
-          command: mkdir -p << parameters.artifactsPath >> && mv ${<< parameters.projectPath >>}/*_Positions.xlsx << parameters.artifactsPath >>
+          command: mkdir -p << parameters.artifactsPath >> && mv "${<< parameters.projectPath >>}"/*_Positions.xlsx << parameters.artifactsPath >>
 
   create_gerbers:
     parameters:
@@ -134,7 +134,7 @@ commands:
       - run:
           name: Generate Gerbers
           command: |
-            cd ${<< parameters.projectPath >>}
+            cd "${<< parameters.projectPath >>}"
             kiplot -b "<< parameters.PCBFile >>" -c << parameters.configFile>>
             PROJECTNAME=$(basename <<parameters.PCBFile>> .kicad_pcb) # strip the extension from PCBFile and use it as project name
             mkdir -p << parameters.artifactsPath >> && tar -zcvf << parameters.artifactsPath >>/${PROJECTNAME}_Gerbers.tar.gz gerberdir/
