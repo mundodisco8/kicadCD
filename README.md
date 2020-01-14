@@ -4,9 +4,9 @@ kicadCD circleCI's orb, an orb to help automating the generation of production f
 
 I'm by no means an expert on this whole CI/CD, docker, python thing, and this project responds to a very particular necessity. It adjusts to my workflow, and that means that might not adjust to yours, but feel free to suggest any improvements.
 
-## v0.1.0 (24/10/2019)
+## v0.1.0 (14/01/2020)
 
-First release of the orb. Not really intended for general use as it's pretty much WIP and will probably will change a lot in the short term. It can generate Gerbers with Kiplot and the positions file for the pick and place. It doesn't generate BoMs yet, but that will hopefully added soon.
+First release of the orb. Not really intended for general use as it's pretty much WIP and will probably will change a lot in the short term. It can generate Gerbers with Kiplot, bill of materials with KiBom the positions file for the pick and place.
 
 ## How to Use:
 
@@ -178,7 +178,3 @@ circleci orb publish {pathToOrb} {namespace}/{orbName}
 ```
 
 Use the `increment` command to increment the version number of a published orb, or `promote` to promote a dev Orb to production.
-
-## To Do
-
-- Add BoM generation to the Orb, the scripts are already in place.

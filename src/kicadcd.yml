@@ -24,7 +24,7 @@ jobs:
         type: env_var_name
         default: PROJECT_PATH
       PCBFile:
-        description: "[REQUIRED] File that will be used as input."
+        description: "[REQUIRED] File that will be used as input. RELATIVE TO projectPath!"
         type: string
       includeVirtualComponentsFlag:
         description: "[OPTIONAL] Determines if components marked as \"Virtual\" should be included or not. By default they aren't, but it can be helpful if you need the positions of thinks like test pads, mounting holes, fiducials, ..."
@@ -56,12 +56,16 @@ jobs:
         type: env_var_name
         default: PROJECT_PATH
       PCBFile:
-        description: "[REQUIRED] File that will be used as input."
+        description: "[REQUIRED] File that will be used as input. RELATIVE TO projectPath!"
         type: string
       configFile:
-        description: "[OPTIONAL] Kiplot config file to be used."
+        description: "[OPTIONAL] Kiplot config file to be used. RELATIVE TO projectPath!"
         type: string
         default: "Kiplot_config.yaml"
+      gerberDir:
+        description: "[OPTIONAL] Kiplot's output path. Check Kiplot's config and make sure it matches"
+        type: string
+        default: "gerberdir"
       artifactsPath:
         description: "[OPTIONAL] Path where to store the artifacts"
         type: string
@@ -75,9 +79,44 @@ jobs:
           projectPath: << parameters.projectPath >>
           PCBFile: << parameters.PCBFile >>
           configFile: << parameters.configFile >>
+          gerberDir: << parameters.gerberDir >>
           artifactsPath: << parameters.artifactsPath >>
       - store_artifacts_cmd:
           artifactsPath: << parameters.artifactsPath >>
+
+  createBillOfMaterials:
+    parameters:
+      projectPath:
+        description: "[REQUIRED] Environmental variable containing the project's folder path"
+        type: env_var_name
+        default: PROJECT_PATH
+      xmlNetlist:
+        description: "[REQUIRED] File that will be used as input. RELATIVE TO projectPath!"
+        type: string
+      bomTemplate:
+        description: "[REQUIRED] Excel template file to be used. RELATIVE TO projectPath!"
+        type: string
+      configFile:
+        description: "[REQUIRED] KiBom config file to be used. RELATIVE TO projectPath!"
+        type: string
+      artifactsPath:
+        description: "[OPTIONAL] Path where to store the artifacts"
+        type: string
+        default: "/root/project/artifacts/"
+    executor: kicad_on_ubuntu
+    steps:
+      - attach_workspace:
+          at: /root/
+      - clone_script_repo
+      - create_bom:
+          projectPath: << parameters.projectPath >>
+          xmlNetlist: << parameters.xmlNetlist >>
+          bomTemplate: << parameters.bomTemplate >>
+          configFile: << parameters.configFile >>
+          artifactsPath: << parameters.artifactsPath >>
+      - store_artifacts_cmd:
+          artifactsPath: << parameters.artifactsPath >>
+
 
 commands:
   clone_script_repo:  # Clones the repo with the auxiliary python scripts
@@ -86,9 +125,16 @@ commands:
           name: Clone Script Repos
           # Clone repo at /, not workingdir
           command: git clone https://github.com/mundodisco8/KicadPythonScripts.git /KiCad_Python_Scripts
+      - run: # make scripts callable
+          name: Make Scripts callable
+          command: |
+            mv "/KiCad_Python_Scripts/PositionsGenerator/PositionsGenerator.py" /usr/local/bin
+            chmod +x /usr/local/bin/PositionsGenerator.py
+            mv "/KiCad_Python_Scripts/ExcelBomGenerator/ExcelBomGenerator.py" /usr/local/bin
+            chmod +x /usr/local/bin/ExcelBomGenerator.py
 
   create_pick_and_place_file:
-    parameters:
+    parameters: # see jobs for parameter description
       projectPath:
         type: env_var_name
       PCBFile:
@@ -100,13 +146,8 @@ commands:
         type: string
         default: "/root/project/artifacts/"
     steps:
-      - run: # make scripts callable
-          name: Make Scripts callable
-          command: |
-            mv "/KiCad_Python_Scripts/PositionsGenerator/PositionsGenerator.py" /usr/local/bin
-            chmod +x /usr/local/bin/PositionsGenerator.py
-      # Need to add support to the --all thingy with the includeVirtualComponentsFlag
       - run:
+        # Need to add support to the --all thingy with the includeVirtualComponentsFlag
           name: Generate Positions file
           # TODO: fix that projectPath thing, as it's a bit annoying as it is now
           command: PositionsGenerator.py "${<< parameters.projectPath >>}/<< parameters.PCBFile >>"
@@ -119,7 +160,7 @@ commands:
           command: mkdir -p << parameters.artifactsPath >> && mv "${<< parameters.projectPath >>}"/*_Positions.xlsx << parameters.artifactsPath >>
 
   create_gerbers:
-    parameters:
+    parameters: # see jobs for parameter description
       projectPath:
         type: env_var_name
       PCBFile:
@@ -127,17 +168,44 @@ commands:
       configFile:
         type: string
         default: Kiplot_config.yaml
+      gerberDir:
+        type: string
       artifactsPath:
         type: string
         default: "/root/project/artifacts/"
     steps:
       - run:
           name: Generate Gerbers
+          command:
+            # Kiplot will
+            kiplot -b "${<< parameters.projectPath >>}/<< parameters.PCBFile >>" -c "${<< parameters.projectPath >>}/<< parameters.configFile>>"
+      - run:
+          name: Zip Gerbers
           command: |
-            cd "${<< parameters.projectPath >>}"
-            kiplot -b "<< parameters.PCBFile >>" -c << parameters.configFile>>
             PROJECTNAME=$(basename <<parameters.PCBFile>> .kicad_pcb) # strip the extension from PCBFile and use it as project name
-            mkdir -p << parameters.artifactsPath >> && tar -zcvf << parameters.artifactsPath >>/${PROJECTNAME}_Gerbers.tar.gz gerberdir/
+            mkdir -p << parameters.artifactsPath >> && tar -zcvf << parameters.artifactsPath >>/${PROJECTNAME}_Gerbers.tar.gz "<< parameters.gerberDir >>"
+
+  create_bom:
+    parameters: # see jobs for parameter description
+      projectPath:
+        type: env_var_name
+      xmlNetlist:
+        type: string
+      bomTemplate:
+        type: string
+      configFile:
+        type: string
+      artifactsPath:
+        type: string
+        default: "/root/project/artifacts/"
+    steps:
+      - run:
+          name: Generate Bill Of Materials
+          command:
+            ExcelBomGenerator.py "${<< parameters.projectPath >>}/<< parameters.xmlNetlist >>" "${<< parameters.projectPath >>}/<< parameters.bomTemplate >>" --config "${<< parameters.projectPath >>}/<< parameters.configFile >>"
+      - run:
+          name: Move Artifacts
+          command: mkdir -p << parameters.artifactsPath >> && mv "${<< parameters.projectPath >>}"/*_BoM.xlsx << parameters.artifactsPath >>
 
   store_artifacts_cmd:
     parameters:
